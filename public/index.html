@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Premium Room Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans flex items-center justify-center min-h-screen relative">
+
+  <!-- Join Screen -->
+  <div id="joinScreen" class="w-full max-w-md bg-gray-800 p-6 rounded-2xl shadow-lg">
+    <h1 class="text-2xl font-bold text-center mb-4">💬 Join a Chat Room</h1>
+    <input id="username" placeholder="Enter your name"
+      class="w-full mb-3 p-3 rounded-lg bg-gray-700 text-white focus:outline-none">
+    <input id="roomId" placeholder="Enter Room ID (or create)"
+      class="w-full mb-3 p-3 rounded-lg bg-gray-700 text-white focus:outline-none">
+    <div class="flex space-x-3">
+      <button id="createRoom" class="flex-1 py-2 bg-green-600 hover:bg-green-700 rounded-lg">Create Room</button>
+      <button id="joinRoom" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">Join Room</button>
+    </div>
+  </div>
+
+  <!-- Chat Screen -->
+  <div id="chatScreen" class="hidden w-full max-w-3xl bg-gray-800 rounded-2xl shadow-lg flex flex-col h-[80vh]">
+    <div class="bg-gray-900 p-4 rounded-t-2xl flex justify-between items-center">
+      <h2 id="roomTitle" class="text-lg font-semibold">Room</h2>
+      <button id="leaveBtn" class="text-red-400 hover:text-red-500">Leave</button>
+    </div>
+
+    <div id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-800">
+      <!-- Messages appear here -->
+    </div>
+
+    <div class="p-4 bg-gray-900 rounded-b-2xl flex space-x-2 items-center relative">
+      <button id="emojiBtn" class="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 rounded-lg">😊</button>
+      <button id="gifBtn" class="px-3 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg">GIF</button>
+      <input id="chatInput" placeholder="Type a message..."
+        class="flex-1 p-3 rounded-full bg-gray-700 text-white focus:outline-none">
+      <button id="sendBtn" class="px-5 py-2 bg-pink-500 hover:bg-pink-600 rounded-full">➤</button>
+      <emoji-picker id="emojiPicker" class="hidden absolute bottom-14 left-2 z-50 shadow-2xl rounded-lg"></emoji-picker>
+    </div>
+
+    <div id="typingIndicator" class="text-gray-300 text-sm ml-4 mt-1"></div>
+
+    <!-- GIF Modal -->
+    <div id="gifModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-50">
+      <div class="bg-gray-800 rounded-xl p-4 w-96 h-96 flex flex-col">
+        <div class="flex justify-between mb-2">
+          <input id="gifSearch" placeholder="Search GIFs..." class="flex-1 p-2 rounded-lg bg-gray-700 focus:outline-none">
+          <button id="closeGif" class="ml-2 px-3 py-1 bg-red-600 rounded-lg hover:bg-red-700">X</button>
+        </div>
+        <div id="gifResults" class="flex-1 overflow-y-auto grid grid-cols-2 gap-2"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Watermark -->
+<div class="fixed bottom-2 right-2 text-white text-xs opacity-30 select-none pointer-events-none transform rotate-[-10deg] z-50">
+  Made With ❤️ By Ashish
+</div>
+
+
+  <script src="script.js" type="module"></script>
+</body>
+</html>

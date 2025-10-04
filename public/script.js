@@ -16,18 +16,19 @@ const typingIndicator = document.getElementById("typingIndicator");
 
 const usersColors = {}; // track consistent colors per user
 
+
 // ---------- Join / Create Room ----------
 document.getElementById("createRoom").onclick = () => {
   username = document.getElementById("username").value.trim() || "Guest";
   const inputRoom = document.getElementById("roomId").value.trim();
-  roomId = inputRoom || "room-" + Math.random().toString(36).substr(2,6);
+  roomId = inputRoom || "room-" + Math.random().toString(36).substr(2, 6);
   enterRoom();
 };
 
 document.getElementById("joinRoom").onclick = () => {
   username = document.getElementById("username").value.trim() || "Guest";
   roomId = document.getElementById("roomId").value.trim();
-  if(!roomId) return alert("Enter a Room ID!");
+  if (!roomId) return alert("Enter a Room ID!");
   enterRoom();
 };
 
@@ -38,6 +39,7 @@ function enterRoom() {
   chatScreen.classList.remove("hidden");
 }
 
+// Leave room reload
 document.getElementById("leaveBtn").onclick = () => location.reload();
 
 // ---------- Typing ----------
@@ -54,33 +56,44 @@ socket.on("typing", ({ username: user, typing }) => {
 
 // ---------- Send / Receive ----------
 document.getElementById("sendBtn").onclick = sendMessage;
-chatInput.addEventListener("keypress", e => { if(e.key==="Enter") sendMessage(); });
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") sendMessage();
+});
 
 function sendMessage() {
   const text = chatInput.value.trim();
-  if(!text) return;
+  if (!text) return;
   const msg = { user: username, text, time: new Date().toLocaleTimeString() };
   socket.emit("chat", msg);
   chatInput.value = "";
   emojiPicker.classList.add("hidden");
 }
 
+// ---------- Load Chat History ----------
+socket.on("chatHistory", (messages) => {
+  chatBox.innerHTML = "";
+  messages.forEach((msg) => appendChat(msg));
+});
+
 // ---------- Append Chat ----------
-socket.on("chat", msg => appendChat(msg));
+socket.on("chat", (msg) => appendChat(msg));
 
 function appendChat(msg) {
   const isOwn = msg.user === username;
-  if(!usersColors[msg.user] && msg.user!=="System") {
-    usersColors[msg.user] = `hsl(${Math.floor(Math.random()*360)}, 70%, 50%)`;
+  if (!usersColors[msg.user] && msg.user !== "System") {
+    usersColors[msg.user] = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
   }
 
   const div = document.createElement("div");
-  div.className = `flex ${isOwn ? "justify-end" : "justify-start"} items-end space-x-2`;
+  div.className = `flex ${
+    isOwn ? "justify-end" : "justify-start"
+  } items-end space-x-2`;
 
   // Avatar
-  if(!isOwn && msg.user!=="System") {
+  if (!isOwn && msg.user !== "System") {
     const avatar = document.createElement("div");
-    avatar.className = "w-8 h-8 flex items-center justify-center rounded-full text-white font-bold text-sm";
+    avatar.className =
+      "w-8 h-8 flex items-center justify-center rounded-full text-white font-bold text-sm";
     avatar.style.backgroundColor = usersColors[msg.user];
     avatar.textContent = msg.user[0].toUpperCase();
     div.appendChild(avatar);
@@ -88,9 +101,10 @@ function appendChat(msg) {
 
   const bubble = document.createElement("div");
   bubble.setAttribute("data-msg-id", msg.id);
-  const bubbleClass = msg.user==="System"
-    ? "bg-gray-600 text-gray-200 rounded-xl px-4 py-2"
-    : isOwn
+  const bubbleClass =
+    msg.user === "System"
+      ? "bg-gray-600 text-gray-200 rounded-xl px-4 py-2"
+      : isOwn
       ? "bg-pink-500 text-white rounded-br-none px-4 py-2"
       : "bg-gradient-to-r from-blue-600 to-teal-500 text-white rounded-bl-none px-4 py-2";
   bubble.className = `shadow ${bubbleClass} relative cursor-pointer`;
@@ -102,21 +116,23 @@ function appendChat(msg) {
   // Click to react
   bubble.addEventListener("click", () => {
     const reaction = prompt("Enter emoji to react:");
-    if (reaction) socket.emit("reaction", { messageId: msg.id, emoji: reaction });
+    if (reaction)
+      socket.emit("reaction", { messageId: msg.id, emoji: reaction });
   });
 
   div.appendChild(bubble);
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 
-  // Track read receipts
   if (isOwn) socket.emit("read", msg.id);
 }
 
 // ---------- Reactions ----------
 socket.on("reaction", ({ messageId, emoji, username: user }) => {
-  const bubble = Array.from(chatBox.children).find(div =>
-    div.querySelector("div") && div.querySelector("div").getAttribute("data-msg-id") === messageId
+  const bubble = Array.from(chatBox.children).find(
+    (div) =>
+      div.querySelector("div") &&
+      div.querySelector("div").getAttribute("data-msg-id") === messageId
   );
   if (!bubble) return;
 
@@ -135,7 +151,7 @@ socket.on("reaction", ({ messageId, emoji, username: user }) => {
 
 // ---------- Read receipts ----------
 socket.on("readUpdate", (roomUsers) => {
-  Array.from(chatBox.children).forEach(div => {
+  Array.from(chatBox.children).forEach((div) => {
     const bubble = div.querySelector("div");
     if (!bubble) return;
     const bubbleId = bubble.getAttribute("data-msg-id");
@@ -144,52 +160,61 @@ socket.on("readUpdate", (roomUsers) => {
     const existing = bubble.querySelector(".read-check");
     if (existing) existing.remove();
 
-    const readers = Object.values(roomUsers).filter(u => u.lastReadId === bubbleId && u.username !== username);
+    const readers = Object.values(roomUsers).filter(
+      (u) => u.lastReadId === bubbleId && u.username !== username
+    );
     if (readers.length > 0) {
       const check = document.createElement("span");
       check.className = "read-check text-xs text-gray-200 ml-1";
-      check.textContent = `✔${readers.length>1?"✔":""}`;
+      check.textContent = `✔${readers.length > 1 ? "✔" : ""}`;
       bubble.appendChild(check);
     }
   });
 });
 
+
+
 // ---------- Emoji Picker ----------
-const emojiBtn = document.getElementById("emojiBtn");
-emojiBtn.onclick = () => {
+document.getElementById("emojiBtn").onclick = () => {
   const rect = chatInput.getBoundingClientRect();
   emojiPicker.style.position = "absolute";
   emojiPicker.style.bottom = `${window.innerHeight - rect.top + 10}px`;
   emojiPicker.style.left = `${rect.left}px`;
   emojiPicker.classList.toggle("hidden");
 };
-
-emojiPicker.addEventListener("emoji-click", e => {
+emojiPicker.addEventListener("emoji-click", (e) => {
   chatInput.value += e.detail.unicode;
   emojiPicker.classList.add("hidden");
 });
 
 // ---------- GIF Modal ----------
-document.getElementById("gifBtn").onclick = () => gifModal.classList.remove("hidden");
+document.getElementById("gifBtn").onclick = () =>
+  gifModal.classList.remove("hidden");
 document.getElementById("closeGif").onclick = () => {
   gifModal.classList.add("hidden");
   gifResults.innerHTML = "";
 };
-
-document.getElementById("gifSearch").addEventListener("keypress", async e => {
+document.getElementById("gifSearch").addEventListener("keypress", async (e) => {
   if (e.key !== "Enter") return;
   const query = e.target.value.trim();
   if (!query) return;
   gifResults.innerHTML = "Loading...";
-  const res = await fetch(`https://g.tenor.com/v1/search?q=${query}&key=${TENOR_KEY}&limit=10`);
+  const res = await fetch(
+    `https://g.tenor.com/v1/search?q=${query}&key=${TENOR_KEY}&limit=10`
+  );
   const data = await res.json();
   gifResults.innerHTML = "";
-  data.results.forEach(gif => {
+  data.results.forEach((gif) => {
     const img = document.createElement("img");
     img.src = gif.media[0].gif.url;
-    img.className = "w-full h-24 object-cover rounded cursor-pointer hover:opacity-80";
+    img.className =
+      "w-full h-24 object-cover rounded cursor-pointer hover:opacity-80";
     img.onclick = () => {
-      const msg = { user: username, text: img.src, time: new Date().toLocaleTimeString() };
+      const msg = {
+        user: username,
+        text: img.src,
+        time: new Date().toLocaleTimeString(),
+      };
       socket.emit("chat", msg);
       gifModal.classList.add("hidden");
       gifResults.innerHTML = "";

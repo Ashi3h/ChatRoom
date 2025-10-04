@@ -1,0 +1,7 @@
+#emojiPicker {
+  position: fixed !important;
+  bottom: 100px; /* above input area */
+  left: 50% !important;
+  transform: translateX(-50%);
+  z-index: 50;
+}

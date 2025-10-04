@@ -12,7 +12,7 @@ app.use(express.static("public"));
 
 // MongoDB connection
 mongoose
-  .connect("mongodb://localhost:27017/chatroom", {
+  .connect("mongodb+srv://chatappdb:QHmhH72F25BWsgPs@chatapp.qjtzrkf.mongodb.net/?retryWrites=true&w=majority&appName=chatapp", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -46,8 +46,18 @@ const rooms = {};
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
-  // User joins a room
+  // ----- User joins a room -----
   socket.on("join", async (roomId, username) => {
+    if (!roomId || !username) return;
+
+    // ✅ Prevent duplicate usernames in same room
+    const clients = await io.in(roomId).fetchSockets();
+    const nameTaken = clients.some((client) => client.username === username);
+    if (nameTaken) {
+      socket.emit("joinError", "❌ This username is already taken in this room!");
+      return;
+    }
+
     socket.join(roomId);
     socket.roomId = roomId;
     socket.username = username;
@@ -78,11 +88,9 @@ io.on("connection", (socket) => {
       type: "system",
     };
     io.to(roomId).emit("chat", joinMsg);
-
-    // Optional: store system message in MongoDB if you want
   });
 
-  // Chat message
+  // ----- Chat message -----
   socket.on("chat", async (msg) => {
     if (!socket.roomId) return;
 
@@ -105,7 +113,7 @@ io.on("connection", (socket) => {
     io.to(socket.roomId).emit("chat", msg);
   });
 
-  // Typing
+  // ----- Typing -----
   socket.on("typing", (isTyping) => {
     if (!socket.roomId) return;
     socket
@@ -113,7 +121,7 @@ io.on("connection", (socket) => {
       .emit("typing", { username: socket.username, typing: isTyping });
   });
 
-  // Reaction
+  // ----- Reaction -----
   socket.on("reaction", ({ messageId, emoji }) => {
     if (!socket.roomId) return;
     io.to(socket.roomId).emit("reaction", {
@@ -123,14 +131,14 @@ io.on("connection", (socket) => {
     });
   });
 
-  // Read receipt
+  // ----- Read receipt -----
   socket.on("read", (messageId) => {
     if (!socket.roomId) return;
     rooms[socket.roomId][socket.id].lastReadId = messageId;
     io.to(socket.roomId).emit("readUpdate", rooms[socket.roomId]);
   });
 
-  // Disconnect
+  // ----- Disconnect -----
   socket.on("disconnect", async () => {
     if (socket.roomId && rooms[socket.roomId]) {
       delete rooms[socket.roomId][socket.id];
@@ -147,14 +155,11 @@ io.on("connection", (socket) => {
       };
       io.to(socket.roomId).emit("chat", leaveMsg);
 
-      // Check if room is empty → delete messages
+      // ✅ If room empty → delete chats & room
       if (Object.keys(rooms[socket.roomId]).length === 0) {
         console.log(`Cleaning up room: ${socket.roomId}`);
 
-        // Delete all messages from MongoDB
         await Message.deleteMany({ roomId: socket.roomId });
-
-        // Optionally, delete the room itself
         await Room.deleteOne({ roomId: socket.roomId });
 
         delete rooms[socket.roomId];

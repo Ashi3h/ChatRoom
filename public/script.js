@@ -75,6 +75,13 @@ socket.on("chatHistory", (messages) => {
   messages.forEach((msg) => appendChat(msg));
 });
 
+
+socket.on("joinError", (msg) => {
+  alert(msg);
+  location.reload(); // Go back to join screen
+});
+
+
 // ---------- Append Chat ----------
 socket.on("chat", (msg) => appendChat(msg));
 
@@ -186,6 +193,8 @@ emojiPicker.addEventListener("emoji-click", (e) => {
   chatInput.value += e.detail.unicode;
   emojiPicker.classList.add("hidden");
 });
+
+
 
 // ---------- GIF Modal ----------
 document.getElementById("gifBtn").onclick = () =>

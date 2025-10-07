@@ -1,4 +1,5 @@
 // server.js
+require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -12,7 +13,7 @@ app.use(express.static("public"));
 
 // MongoDB connection
 mongoose
-  .connect("mongodb+srv://chatappdb:QHmhH72F25BWsgPs@chatapp.qjtzrkf.mongodb.net/?retryWrites=true&w=majority&appName=chatapp", {
+  .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -88,6 +89,38 @@ io.on("connection", (socket) => {
       type: "system",
     };
     io.to(roomId).emit("chat", joinMsg);
+
+     const usersInRoom = Object.values(rooms[roomId]).map(user => user.username);
+     io.to(roomId).emit("roomData", {
+      roomId: roomId,
+      users: usersInRoom,
+      userCount: usersInRoom.length,
+    });
+
+     socket.on("disconnect", async () => {
+    const roomId = socket.roomId; // Get roomId before it's gone
+    if (roomId && rooms[roomId] && rooms[roomId][socket.id]) {
+      // ... (your existing disconnect code to delete the user and broadcast a leave message)
+      delete rooms[roomId][socket.id];
+      // ...
+
+      // Check if the room still exists in memory before sending the update
+      if (rooms[roomId]) {
+        const usersInRoom = Object.values(rooms[roomId]).map(user => user.username);
+        
+        // ✅ ADD THIS: Broadcast the updated user list after someone leaves
+        io.to(roomId).emit("roomData", {
+          roomId: roomId,
+          users: usersInRoom,
+          userCount: usersInRoom.length,
+        });
+      }
+
+      // ... (your existing cleanup logic)
+    }
+    console.log("Client disconnected:", socket.id);
+  });
+
   });
 
   // ----- Chat message -----
@@ -159,8 +192,8 @@ io.on("connection", (socket) => {
       if (Object.keys(rooms[socket.roomId]).length === 0) {
         console.log(`Cleaning up room: ${socket.roomId}`);
 
-        await Message.deleteMany({ roomId: socket.roomId });
-        await Room.deleteOne({ roomId: socket.roomId });
+        await Message.deleteMany({ roomId: socket.roomId });      // this line automatically delete chat after leave
+        await Room.deleteOne({ roomId: socket.roomId });    // this line automatically delete user after leave
 
         delete rooms[socket.roomId];
       }
@@ -169,6 +202,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(3000, () =>
+
+server.listen(process.env.PORT, () =>
   console.log("🚀 Chat server running at http://localhost:3000")
 );

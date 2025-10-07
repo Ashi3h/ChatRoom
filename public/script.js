@@ -231,3 +231,22 @@ document.getElementById("gifSearch").addEventListener("keypress", async (e) => {
     gifResults.appendChild(img);
   });
 });
+
+
+
+
+
+
+// Assuming 'socket' is your connected client-side socket instance
+const roomInfo = document.getElementById('room-info');
+
+// Listen for the 'roomData' event from the server
+socket.on('roomData', ({ userCount, users }) => {
+  console.log('Received room data:', { userCount, users });
+
+  // Update the HTML with the new data
+  roomInfo.innerHTML = `
+    <h2>Chat Room (${userCount} Online)</h2>
+    <p><strong>Active Users:</strong> ${users.join(', ')}</p>
+  `;
+});
